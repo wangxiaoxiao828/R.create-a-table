@@ -33,19 +33,19 @@ file_update$product <- product.name
 file_update$send_down_date <- send_down_date
 file_update$channel <- product.channel
 
-write.csv(file_update,paste("everyday/updated/",send_down_date,"_",i,".csv",sep=""),row.names = FALSE,fileEncoding = 'UTF-8')
+write.csv(file_update,paste("everyday/updated/",send_down_date,"_",i,".csv",sep=""),row.names = FALSE,fileEncoding = 'UTF-8',eol='\r\n')
 
 }
 
-# con <- dbConnect(MySQL(),host="192.168.0.20",dbname="db_traffic",user="wangxx",password="Wangxx@0118")
-# 
-# res <- dbSendQuery(con, paste("load data local infile 'everyday/updated/",send_down_date,"_",i,".csv' IGNORE into table tb_send_down_record
-#                               FIELDS
-#                               ENCLOSED BY '\"'
-#                               terminated by ','
-#                               LINES TERMINATED BY '\r'
-#                               IGNORE 1 lines
-#                               (phone, product, send_down_date, channel);",sep=""))
-# data.credit <- dbFetch(res, n=-1)
-# 
-# dbDisconnect(con)
+con <- dbConnect(MySQL(),host="192.168.0.20",dbname="db_traffic",user="wangxx",password="Wangxx@0118")
+
+res <- dbSendQuery(con, paste("load data local infile 'everyday/updated/",send_down_date,"_",i,".csv' IGNORE into table tb_send_down_record
+                              FIELDS
+                              ENCLOSED BY '\"'
+                              terminated by ','
+                              LINES TERMINATED BY '\r\n'
+                              IGNORE 1 lines
+                              (phone, product, send_down_date, channel);",sep=""))
+data.credit <- dbFetch(res, n=-1)
+
+dbDisconnect(con)
