@@ -35,7 +35,7 @@ file_update$channel <- product.channel
 
 write.csv(file_update,paste("everyday/updated/",send_down_date,"_",i,".csv",sep=""),row.names = FALSE,fileEncoding = 'UTF-8',eol='\r\n')
 
-}
+
 
 con <- dbConnect(MySQL(),host="192.168.0.20",dbname="db_traffic",user="wangxx",password="Wangxx@0118")
 
@@ -49,3 +49,5 @@ res <- dbSendQuery(con, paste("load data local infile 'everyday/updated/",send_d
 data.credit <- dbFetch(res, n=-1)
 
 dbDisconnect(con)
+
+}
