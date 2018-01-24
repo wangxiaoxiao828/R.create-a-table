@@ -1,0 +1,22 @@
+
+#检测imei号是否合法
+#输入data.table的某列 返回同长度逻辑列 TRUE为合法imei FALSE为不合法imei
+
+library(stringr)
+
+check.number <- function(n){
+  ifelse(n>=10,n-9,n)
+}
+
+check.imei <- function(imei){
+  
+    ##取出前14位
+    digits <- substring(imei,first=(1:14),last=(1:14))
+    ##取出校验码
+    last.number <- as.numeric(substring(imei,15,15))
+    digits <- check.number(as.numeric(str_extract_all(digits,"[0-9]")) * c(1,2,1,2,1,2,1,2,1,2,1,2,1,2)) 
+    ##计算校验码
+    check.number <- 10 - (sum(digits) %% 10);
+    ifelse(last.number==check.number,TRUE,FALSE)
+  
+}
