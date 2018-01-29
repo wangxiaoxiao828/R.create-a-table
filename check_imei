@@ -1,8 +1,8 @@
 
 #检测imei号是否合法
 #输入data.table的某列 返回同长度逻辑列 TRUE为合法imei FALSE为不合法imei
-
 #并向量化此函数
+#用法：data <- subset(data,is.imei(data$imei))
 
 library(stringr)
 library(plyr)
