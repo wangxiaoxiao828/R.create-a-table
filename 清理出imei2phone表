@@ -1,0 +1,53 @@
+# 清理出符合命名规则的imei
+# 整理imei_o,imei_x,phone 和 imei_o, phone两张表中的imei2phone 和 imei_x2phone
+
+library(data.table)
+library(RMySQL)
+library(bit64)
+source("check_imei.R",encoding='UTF-8')
+
+file.list <- list.files("/home/wangxx/temp_dict_imei2phone/")
+
+a <- proc.time()
+for (i in 2:length(file.list)) {
+  temp <- fread(paste("/home/wangxx/temp_dict_imei2phone/",file.list[i],sep=""),header = FALSE,col.names = c('imei_o','imei_x','phone'))
+  temp <- subset(temp,is.imei(temp$imei_o))
+  fwrite(temp, file="clean_dict_phone_imei.csv",append = TRUE,eol="\r\n")
+}
+proc.time()-a
+
+# 制作符合命名规则的imei_o,imei_x,phone表
+# dict_imei_phone: imei_o-imei_x-phone
+# tb_imei_phone: imei_o-phone
+
+dict_imei_phone <- fread("clean_dict_phone_imei.csv")
+tb_imei_phone <- fread("dict_data/clean_tb_phone_imei.csv")
+
+# 取出dict中imei明码和手机号两列 并去掉无效手机
+dict_imei_phone.imei2phone <- dict_imei_phone[,.(imei_o,phone)]
+dict_imei_phone.imei2phone <- subset(dict_imei_phone.imei2phone,grepl("^((13[0-9])|(14[5-9])|166|19[89]|(15([0-3]|[5-9]))|(18[0-9])|(17([0-3]|[5-8])))\\d{8}$",dict_imei_phone.imei2phone$phone))
+dict_imei_phone.imei2phone$x <- dict_imei_phone.imei2phone$imei
+dict_imei_phone.imei2phone <- dict_imei_phone.imei2phone[,.(phone,x)]
+colnames(dict_imei_phone.imei2phone) <- c("phone","imei")
+dict_imei_phone.imei2phone$phone <- as.integer64(dict_imei_phone.imei2phone$phone)
+
+# 把dict中imei2phone和tb_imei_phone中imei2phone合并 其中共153984045个组合, 139616969个手机号, 134616889个imei
+imei2phone <- funion(dict_imei_phone.imei2phone,tb_imei_phone)
+fwrite(imei2phone,"dict_data/imei2phone.csv",eol='\r\n')
+
+# 制作imei_x2phone imei暗码对应手机号
+# dict_imei_phone <- merge(dict_imei_phone,imei2phone,by.x='imei_o',by.y = 'imei') Join results in more than 2^31 rows (internal vecseq reached physical limit).
+# 把dict_imei_phone分为4个data.table再进行merge
+setkey(dict_imei_phone,imei_o)
+setkey(imei2phone,imei)
+# 还是不行
+# 保留dict_imei_phone中imei_o在imei2phone的部分
+dict_imei_phone <- subset(dict_imei_phone, imei_o %in% imei2phone$imei)
+imei2phone.1 <- subset(imei2phone, imei %in% dict_imei_phone$imei_o)
+dict_imei_phone <- subset(dict_imei_phone, imei_o %in% imei2phone.1$imei)
+dict_imei_phone <- dict_imei_phone[,.(imei_o,imei_x)]
+dict_imei_phone <- unique(dict_imei_phone)
+imei_x2phone <- merge(dict_imei_phone,imei2phone.1,by.x = 'imei_o',by.y = 'imei')
+imei_x2phone <- imei_x2phone[,.(imei_x,phone)]
+imei_x2phone <- unique(imei_x2phone)
+fwrite(imei_x2phone,"dict_data/imei_x2phone.csv",eol='\r\n')
