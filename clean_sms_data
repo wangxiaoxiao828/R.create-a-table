@@ -31,7 +31,7 @@ for (i in 8:450){
   temp.2 <- imei_x2phone(temp.2,'V2')
   temp.2$V2 <- NULL
   temp.phone <- funion(temp.1,temp.2)
-  temp.phone <- temp.phone[,.(date=max(V3),fin_type=max(V8)),by=.(sms_code=V7,phone)]
+  temp.phone <- temp.phone[,.(date=max(V3)),by=.(sms_code=V7,phone,fin_type=V8)]
   temp.phone$date <- as.Date(temp.phone$date)
   temp.phone <- check.city(temp.phone)
   fwrite(temp.phone,"sms_data_phone.csv",eol="\r\n",append = TRUE)
