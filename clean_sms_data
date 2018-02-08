@@ -1,0 +1,39 @@
+library(data.table)
+source("feature.R")
+# dict.data  imsi_x-phone
+dict.f1 <- fread(file="dict_data/imsi_x2phone_xx.csv")
+setkey(dict.f1,imsi)
+imsi_x2phone <- function(temp.data,imsi='imsi') {
+  x <- merge(temp.data,dict.f1,by.x=imsi,by.y='imsi');
+  x
+}
+dict.f2 <- fread(file="dict_data/imei_x2phone_xx.csv")
+setkey(dict.f2,imei_x)
+# dict.data  imei_x-phone
+imei_x2phone <- function(temp.data,imei='imei') {
+
+  x <- merge(temp.data,dict.f2,by.x=imei,by.y='imei_x');
+  x
+}
+
+sms.help <- fread("sms_help.csv")
+file.list <- list.files("/data/sms/")
+ptm <- proc.time()
+for (i in 8:450){
+  temp <- fread(paste("/data/sms/",file.list[i],sep=""))
+  # temp <- funion(temp,sms.help)
+  # temp.date <- temp[,.(date=max(V3),V4=V4,V5=V5,V6=V6,V7=V7,V8=V8,V9=V9),by=.(V1,V2)]
+  # temp.3 <- dcast(temp.date,V1+V2+date+V4+V5+V6+V8 ~ V7,fun.aggregate = length, value.var = 'V9')
+  temp.1 <- temp[,.(V1,V3,V4,V5,V6,V7,V8)]
+  temp.2 <- temp[,.(V2,V3,V4,V5,V6,V7,V8)]
+  temp.1 <- imsi_x2phone(temp.1,'V1')
+  temp.1$V1 <- NULL
+  temp.2 <- imei_x2phone(temp.2,'V2')
+  temp.2$V2 <- NULL
+  temp.phone <- funion(temp.1,temp.2)
+  temp.phone <- temp.phone[,.(date=max(V3),fin_type=max(V8)),by=.(sms_code=V7,phone)]
+  temp.phone$date <- as.Date(temp.phone$date)
+  temp.phone <- check.city(temp.phone)
+  fwrite(temp.phone,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+  }
+proc.time()-ptm
