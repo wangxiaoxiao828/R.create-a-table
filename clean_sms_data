@@ -1,5 +1,7 @@
 library(data.table)
-source("feature.R")
+source("feature.R") #用于查看归属地及运营商
+# 前提:硬盘120G,内存空间64G有限,不能一次处理300G文件
+
 # dict.data  imsi_x-phone
 dict.f1 <- fread(file="dict_data/imsi_x2phone_xx.csv")
 setkey(dict.f1,imsi)
@@ -16,10 +18,12 @@ imei_x2phone <- function(temp.data,imei='imei') {
   x
 }
 
+# 转所有imsi,imei成phone 活跃时间取最大值 
+# 担心单个文件太大 所以分别写入5个文件
 sms.help <- fread("sms_help.csv")
 file.list <- list.files("/data/sms/")
 ptm <- proc.time()
-for (i in 8:450){
+for (i in 7:length((file.list)-1)){
   temp <- fread(paste("/data/sms/",file.list[i],sep=""))
   # temp <- funion(temp,sms.help)
   # temp.date <- temp[,.(date=max(V3),V4=V4,V5=V5,V6=V6,V7=V7,V8=V8,V9=V9),by=.(V1,V2)]
@@ -34,6 +38,38 @@ for (i in 8:450){
   temp.phone <- temp.phone[,.(date=max(V3)),by=.(sms_code=V7,phone,fin_type=V8)]
   temp.phone$date <- as.Date(temp.phone$date)
   temp.phone <- check.city(temp.phone)
-  fwrite(temp.phone,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+  fwrite(temp.phone,"sms_data_phone_4.csv",eol="\r\n",append = TRUE)
   }
 proc.time()-ptm
+
+# 分别fread5个文件并取同类记录最新活跃时间
+# 进一步确认活跃时间再写入一个文件中
+sms.data.0 <- fread("sms_data_phone_0.csv")
+uniqueN(sms.data.0$phone)
+sms.data.0 <- sms.data.0[,.(date=max(date)),by=.(phone,sms_code,fin_type,Province,City,Corp)]
+fwrite(sms.data.0,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+
+sms.data.1 <- fread("sms_data_phone_1.csv")
+sms.data.1 <- sms.data.1[,.(date=max(date)),by=.(phone,sms_code,fin_type,Province,City,Corp)]
+fwrite(sms.data.1,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+
+sms.data.2 <- fread("sms_data_phone_2.csv")
+sms.data.2 <- sms.data.2[,.(date=max(date)),by=.(phone,sms_code,fin_type,Province,City,Corp)]
+fwrite(sms.data.2,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+
+sms.data.3 <- fread("sms_data_phone_3.csv")
+sms.data.3 <- sms.data.3[,.(date=max(date)),by=.(phone,sms_code,fin_type,Province,City,Corp)]
+fwrite(sms.data.3,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+
+sms.data.4 <- fread("sms_data_phone_4.csv")
+sms.data.4 <- sms.data.4[,.(date=max(date)),by=.(phone,sms_code,fin_type,Province,City,Corp)]
+fwrite(sms.data.4,"sms_data_phone.csv",eol="\r\n",append = TRUE)
+
+# 读取该文件再次取同类记录最新活跃时间 至此全部整理完毕
+sms.data.phone <- fread("sms_data_phone.csv")
+sms.data.phone <- sms.data.phone[,.(date=max(date)),by=.(phone,sms_code,fin_type,Province,City,Corp)]
+fwrite(sms.data.phone,"sms_data_phone_clean.csv",eol="\r\n")
+
+# phone, sms_code, fin_type, Province, City, Corp, date
+# 失去信息:同一号码收到不同类型信息时所在地, 信息条数, 接受不同信息时间
+
