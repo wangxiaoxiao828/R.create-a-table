@@ -17,7 +17,7 @@ temp.function <- function(path){
   # 写下该文件夹下所有文件
   file.list <- list.files(path)
   for(i in 1:length(file.list)){
-    temp <- fread(paste(path,file.list[i],sep=""),colClasses = c('character','character','character','character','character','character'))
+    temp <- fread(paste(path,file.list[i],sep=""),header = FALSE, colClasses = c('character','character','character','character','character','character'))
     temp <- temp[,.(V3,V4,V5)]
     colnames(temp) <- c('imei_o','imei_x','phone')
     fwrite(temp,'temp.csv',eol='\r\n',append = TRUE)
