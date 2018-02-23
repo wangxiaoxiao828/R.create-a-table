@@ -12,7 +12,7 @@ library(RMySQL)
 source("feature.R")
 
 temp.function <- function(path){
-  path <- "/data/identify/identify_end_20170625/"
+  file.remove("temp.csv")
   
   # 写下该文件夹下所有文件
   file.list <- list.files(path)
@@ -61,7 +61,7 @@ temp.function <- function(path){
     fwrite(x,paste(substring(path,nchar(path)-13,nchar(path)-1),'_b',sep = ''),eol='\r\n',append = TRUE)
   }
 }
-
+temp.function(path = "/data/identify/identify_end_20170625/")
 temp.function(path = "/data/identify/id_2017_03_06/")
 temp.function(path = "/data/identify/id_201611_201702/")
 temp.function(path = "/data/identify/id_201607_201610/")
