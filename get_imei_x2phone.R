@@ -27,36 +27,38 @@ temp.function <- function(path){
   temp <- unique(temp)
   # 取出imei_x-phone部分
   temp.phone <- subset(temp,phone!='\\N')
-  temp.phone <- check.city(temp.phone)
   temp.phone <- temp.phone[,.(imei_x,phone)]
-  fwrite(temp.phone,'temp_imei_x_phone.csv',eol='\r\n',append = TRUE)
-
-# # 计算imei对应关系数
-# imei_o.n <- temp.phone[,.(n=length(phone)),by=.(imei_o)]
-# temp.fraud.imei <- as.data.frame(with(subset(imei_o.n,n>=4),imei_o),stringsAsFactors=FALSE)
-# colnames(temp.fraud.imei) <- 'imei'
-# fwrite(temp.fraud.imei,"temp_fraud_imei.csv",eol='\r\n',append = TRUE)
-# 
-# # 计算phone对应关系数
-# phone.n <- temp.phone[,.(n=length(imei_o)),by=.(phone)]
-# temp.fraud.phone <- as.data.frame(with(subset(phone.n,n>=4),phone),stringsAsFactors = FALSE)
-# colnames(temp.fraud.phone) <- 'phone'
-# fwrite(temp.fraud.phone,"temp_fraud_phone.csv",eol = '\r\n',append = TRUE)
-# 
-# # 去除欺诈imei和phone
-# temp.phone <- subset(temp.phone,!imei_o %in% temp.fraud.imei$imei)
-# temp.phone <- subset(temp.phone,!phone %in% temp.fraud.phone$phone)
-
+  temp.phone <- unique(temp.phone)
+  temp.phone <- check.city(temp.phone)
+  fwrite(temp.phone,paste(substring(path,nchar(path)-13,nchar(path)-1),'_a',sep = ''),eol='\r\n',append = TRUE)
+  
+  # # 计算imei对应关系数
+  # imei_o.n <- temp.phone[,.(n=length(phone)),by=.(imei_o)]
+  # temp.fraud.imei <- as.data.frame(with(subset(imei_o.n,n>=4),imei_o),stringsAsFactors=FALSE)
+  # colnames(temp.fraud.imei) <- 'imei'
+  # fwrite(temp.fraud.imei,"temp_fraud_imei.csv",eol='\r\n',append = TRUE)
+  # 
+  # # 计算phone对应关系数
+  # phone.n <- temp.phone[,.(n=length(imei_o)),by=.(phone)]
+  # temp.fraud.phone <- as.data.frame(with(subset(phone.n,n>=4),phone),stringsAsFactors = FALSE)
+  # colnames(temp.fraud.phone) <- 'phone'
+  # fwrite(temp.fraud.phone,"temp_fraud_phone.csv",eol = '\r\n',append = TRUE)
+  # 
+  # # 去除欺诈imei和phone
+  # temp.phone <- subset(temp.phone,!imei_o %in% temp.fraud.imei$imei)
+  # temp.phone <- subset(temp.phone,!phone %in% temp.fraud.phone$phone)
+  
   # 取出所有imei_o-imei_x部分
   temp <- temp[,.(imei_o,imei_x)]
   # 与dict_data/tb_phone_imei中的imei_o-phone进行匹配
   dict.list <- list.files("tb_phone_imei/")
-
-  for (i in 1:length(dict.list)){
-    dict.imei <- fread(paste("tb_phone_imei/",dict.list[i],sep=""),header = TRUE, colClasses = c("bit64","character"))
+  
+  for (j in 1:length(dict.list)){
+    dict.imei <- fread(paste("tb_phone_imei/",dict.list[j],sep=""),header = TRUE, colClasses = c("bit64","character"))
     x <- merge(temp,dict.imei, by.x='imei_o',by.y='imei')
     x <- x[,.(imei_x,phone)]
-    fwrite(x,"temp_imei_x_phone2.csv",eol='\r\n',append = TRUE)
+    x <- unique(x)
+    fwrite(x,paste(substring(path,nchar(path)-13,nchar(path)-1),'_b',sep = ''),eol='\r\n',append = TRUE)
   }
 }
 
