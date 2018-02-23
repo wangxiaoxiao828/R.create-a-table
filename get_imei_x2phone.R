@@ -60,6 +60,9 @@ temp.function <- function(path){
     x <- unique(x)
     fwrite(x,paste(substring(path,nchar(path)-13,nchar(path)-1),'_b',sep = ''),eol='\r\n',append = TRUE)
   }
+  temp <- fread("temp_imei_x2phone_a.csv",header = TRUE)
+  temp <- unique(temp)
+  fwrite(temp,"temp_imei_x2phone_a.csv",eol='\r\n')
 }
 temp.function(path = "/data/identify/identify_end_20170625/")
 temp.function(path = "/data/identify/id_2017_03_06/")
