@@ -1,4 +1,3 @@
-# 确认库存可发送
 library(RMySQL)
 library(plyr)
 library(openxlsx)
@@ -22,9 +21,9 @@ data.credit <- data.table(data.credit)
 # 计算某产品的三网可发送量
 
 product.name <- enc2utf8('地瓜金融')
-black.place.10086 <- enc2utf8(c('北京,重庆'))
-black.place.10010 <- enc2utf8(c('北京,福建'))
-black.place.10000 <- enc2utf8(c('北京,福建'))
+black.place.10086 <- enc2utf8(c('北京','重庆'))
+black.place.10010 <- enc2utf8(c('北京','福建'))
+black.place.10000 <- enc2utf8(c('北京','福建'))
 
 # 手机黑名单
 black.phone <- read.table("black_list.txt",col.names = 'phone')
@@ -38,10 +37,13 @@ black.time7 <- data.sent.7()
 black.time30 <- data.sent.31()
 
 temp.corp <- function(df){
-  a <- nrow(subset(df,Corp=='中国移动'))
-  b <- nrow(subset(df,Corp=='中国联通'))
-  c <- nrow(subset(df,Corp=='中国电信'))
-  d <- nrow(df);
+  a <- subset(df,Corp=='中国移动')
+  a <- nrow(subset(a, !Province %in% black.place.10086))
+  b <- subset(df,Corp=='中国联通')
+  b <- nrow(subset(b, !Province %in% black.place.10010))
+  c <- subset(df,Corp=='中国电信')
+  c <- nrow(subset(c, !Province %in% black.place.10000))
+  d <- a+b+c;
   c(a,b,c,d)
 }
 
@@ -59,8 +61,8 @@ temp.f <- function(df){
 
 sum_data <- function(df){
   product.name <- enc2utf8(product.name)
-  df <- df[,.(date=max(date)),by=.(phone,业务范围,Province,City,Corp)]
   df$date <- as.Date(df$date)
+  df <- df[,.(date=max(date)),by=.(phone,业务范围,Province,City,Corp)]
   # 去除黑名单
   df <- subset(df, !phone %in% black.phone$phone)
   df <- subset(df, !phone %in% black.channel$phone)
