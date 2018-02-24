@@ -1,9 +1,10 @@
-# 专为匹配sms_data中的imei_x
+# 专为翻译sms_data中的imei_x
 # 与imei_x2phone_xx.csv相比, 此文件包含所有对应关系<=3的imei_x和phone
 # 从6个文件夹中读取共60G文件, 1. 取出其中imei_x-phone部分;
 # 2. 取出其中imei_o-imei_x部分,并与tb_phone_imei中去除欺诈的imei_o-phone进行merge, 得到imei_x-phone
 # 基础: 待匹配的sms_data中为imsi_x,imei_x 故最终需要imei_x-phone. 其由两部分构成: 
-# 一. identify中的imei_x-phone 二. 由identify中的imei_o-imei_x 匹配tb_phone_imei中的imei_o-phone得到
+# 一. identify中的imei_x-phone,输出在temp_imei_x2phone_a.csv 
+# 二. 由identify中的imei_o-imei_x 匹配tb_phone_imei中的imei_o-phone得到,输出在temp_imei_x2phone_b.csv
 
 
 library(data.table)
@@ -20,6 +21,7 @@ temp.function <- function(path){
     temp <- fread(paste(path,file.list[i],sep=""),header = FALSE, colClasses = c('character','character','character','character','character','character'))
     temp <- temp[,.(V3,V4,V5)]
     colnames(temp) <- c('imei_o','imei_x','phone')
+    temp <- unique(temp)
     fwrite(temp,'temp.csv',eol='\r\n',append = TRUE)
   }
   
@@ -30,7 +32,7 @@ temp.function <- function(path){
   temp.phone <- temp.phone[,.(imei_x,phone)]
   temp.phone <- unique(temp.phone)
   temp.phone <- check.city(temp.phone)
-  fwrite(temp.phone,paste(substring(path,nchar(path)-13,nchar(path)-1),'_a',sep = ''),eol='\r\n',append = TRUE)
+  fwrite(temp.phone,"temp_imei_x2phone_a.csv",eol='\r\n',append = TRUE)
   
   # # 计算imei对应关系数
   # imei_o.n <- temp.phone[,.(n=length(phone)),by=.(imei_o)]
@@ -58,15 +60,52 @@ temp.function <- function(path){
     x <- merge(temp,dict.imei, by.x='imei_o',by.y='imei')
     x <- x[,.(imei_x,phone)]
     x <- unique(x)
-    fwrite(x,paste(substring(path,nchar(path)-13,nchar(path)-1),'_b',sep = ''),eol='\r\n',append = TRUE)
+    fwrite(x,"temp_imei_x2phone_b.csv",eol='\r\n',append = TRUE)
   }
   temp <- fread("temp_imei_x2phone_a.csv",header = TRUE)
   temp <- unique(temp)
   fwrite(temp,"temp_imei_x2phone_a.csv",eol='\r\n')
 }
-temp.function(path = "/data/identify/identify_end_20170625/")
+
 temp.function(path = "/data/identify/id_2017_03_06/")
 temp.function(path = "/data/identify/id_201611_201702/")
 temp.function(path = "/data/identify/id_201607_201610/")
-temp.function(path = "/homw/wangxx/dict_data/id_201510_201602/")
-temp.function(path = "/homw/wangxx/dict_data/id_201603_201606/")
+temp.function(path = "/data/identify/identify_end_20170625/")
+temp.function(path = "/home/wangxx/dict_data/id_201510_201602/")
+temp.function(path = "/home/wangxx/dict_data/id_201603_201606/")
+
+# 清理出temp_imei_x2phone_a.csv和b.csv中的对应关系数>=4的imei_x和phone为欺诈
+# 并标记欺诈type,来源于identify和tb_phone_imei的join, type记为join
+# 来源于identify记为identify
+# 来源于tb_phone_imei记为tb_phone_imei
+# 来源于identify和tb_phone_imei的union记为union
+
+get.fraud <- function(temp,type){
+  temp <- unique(temp)
+  imei_x.n <- temp[,.(n=length(phone)),by=.(imei_x)]
+  fraud.imei_x <- subset(imei_x.n,n>=4)
+  fraud.imei_x$type <- type
+  fraud.imei_x <- fraud.imei_x[,.(imei_x,type)]
+  fwrite(fraud.imei_x,"temp_fraud_imei_x.csv",eol = '\r\n',append = TRUE)
+  phone.n <- temp[,.(n=length(imei_x)),by=.(phone)]
+  fraud.phone <- subset(phone.n,n>=4)
+  fraud.phone$type <-  type
+  fraud.phone <- fraud.phone[,.(phone,type)]
+  fwrite(fraud.phone,"temp_fraud_phone.csv",eol = '\r\n',append = TRUE)
+  temp <- subset(temp, !imei_x %in% fraud.imei_x$imei_x)
+  temp <- subset(temp, !phone %in% fraud.phone$phone);
+  temp
+}
+temp <- fread("temp_imei_x2phone_b.csv",header = TRUE)
+temp <- get.fraud(temp,'join')
+fwrite(temp,"temp_imei_x2phone_b.csv",eol = '\r\n')
+temp <- fread("temp_imei_x2phone_a.csv",header = TRUE)
+temp <- get.fraud(temp,'identify')
+fwrite(temp,"temp_imei_x2phone_a.csv",eol = '\r\n')
+
+# 把两个文件合并为一个
+temp.1 <- fread("temp_imei_x2phone_b.csv",header = TRUE)
+temp.2 <- fread("temp_imei_x2phone_a.csv",header = TRUE)
+temp <- funion(temp.1,temp.2)
+temp <- get.fraud(temp,'union')
+fwrite(temp,"temp_imei_x2phone.csv",eol = '\r\n')
