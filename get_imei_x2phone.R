@@ -5,7 +5,12 @@
 # 基础: 待匹配的sms_data中为imsi_x,imei_x 故最终需要imei_x-phone. 其由两部分构成: 
 # 一. identify中的imei_x-phone,输出在temp_imei_x2phone_a.csv 
 # 二. 由identify中的imei_o-imei_x 匹配tb_phone_imei中的imei_o-phone得到,输出在temp_imei_x2phone_b.csv
-
+# 清理出temp_imei_x2phone_a.csv和b.csv中的对应关系数>=4的imei_x和phone为欺诈
+# 并标记欺诈type,来源于identify和tb_phone_imei的join, type记为join
+# 来源于identify记为identify
+# 来源于tb_phone_imei记为tb_phone_imei
+# 来源于identify和tb_phone_imei的union记为union
+# 将清理过的两部分合成一个文件imei_x2phone_antifraud.csv
 
 library(data.table)
 library(bit64)
@@ -108,4 +113,4 @@ temp.1 <- fread("temp_imei_x2phone_b.csv",header = TRUE)
 temp.2 <- fread("temp_imei_x2phone_a.csv",header = TRUE)
 temp <- funion(temp.1,temp.2)
 temp <- get.fraud(temp,'union')
-fwrite(temp,"temp_imei_x2phone.csv",eol = '\r\n')
+fwrite(temp,"imei_x2phone_antifraud.csv",eol = '\r\n')
