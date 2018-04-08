@@ -1,6 +1,6 @@
 # 重制根据身份证判断籍贯的表
 # 重制整合tb_id_city_old_policy和tb_id_city_new_policy
-# 输出为scan_id,province,city
+# 输出为scan_id,province,city_1,city_2,name 身份证前6位,省,市,县,全称.
 # tb_id_city_old_policy中籍贯为省市合在同一字段下
 
 library(data.table)
@@ -59,3 +59,63 @@ id.all <- funion(id.new,id.old) %>%
   funion(id.join)
 id.all <- unique(id.all)
 write.csv(id.all,"身份证户籍.csv",fileEncoding='UTF-8',row.names=FALSE)
+
+idcard <- fread("身份证户籍.csv")
+idcard <- lapply(idcard, iconv,from='UTF-8',to='CP936')
+
+id.old <- fread("E:/tb_id_city_old_policy.csv",encoding = 'UTF-8')
+id.new <- fread("E:/tb_id_city_new_policy.csv",encoding = 'UTF-8')
+
+id.new <- unique(id.new)
+id.new[152:162,2] <- '台湾'
+id.new[163:180,2] <- '香港'
+id.new[181:185,2] <- '澳门'
+id.new <- unique(id.new)
+id.new <- id.new[,.(city=toString(city)),.(scan_id,province)]
+
+id.new.city <- subset(id.new,substr(scan_id,5,6)=='00')
+id.new.city$scan_id.city <- substr(id.new.city$scan_id,1,4)
+id.new.city <- id.new.city[,.(scan_id.city,city,province)]
+id.new$scan_id.city <- substr(id.new$scan_id,1,4)
+id.new.city <- unique(id.new.city)
+id.new <- merge(id.new,id.new.city,by.x = 'scan_id.city',by.y = 'scan_id.city')
+
+id <- read.xlsx("身份证号籍贯对照表.xlsx")
+id$代码 <- as.character(id$代码)
+for (i in 1:nrow(id)){
+  if(is.na(id[i,3])){id[i,3] <- id[i,2]}
+  if(is.na(id[i,4])){id[i,4] <- id[i,3]}
+}
+colnames(id) <- c('scan_id','province','city_1','city_2','name')
+
+id.old <- read.xlsx("行政区划代码GB T2260-84.xlsx")
+id.old$行政区划代码 <- as.character(id.old$行政区划代码)
+colnames(id.old) <- c("scan_id","city")
+
+
+id.old.province <- subset(id.old, substr(scan_id,3,6)=='0000')%>%unique()
+id.old.city <- subset(id.old, substr(scan_id,5,6)=='00')%>%unique()
+id.old$province <- paste0(substr(id.old$scan_id,1,2),'0000')
+id.old$city_1 <- paste0(substr(id.old$scan_id,1,4),'00')
+
+id.old <- merge(id.old,id.old.province,by.x = 'province',by.y ='scan_id' )
+id.old <- merge(id.old,id.old.city,by.x = 'city_1',by.y = 'scan_id',all.x = TRUE)
+id.old[is.na(id.old)] <- ''
+id.old$name <- paste0(id.old$city.y,id.old$city,id.old$city.x)
+id.old <- data.table(id.old)
+id.old <- id.old[,.(scan_id,province=city.y,city_1=city,city_2=city.x,name)]
+for(i in 1:nrow(id.old)){
+  if(id.old[i,3]==''){
+    if(id.old[i,2] %in% c('北京市','上海市','天津市')){
+      id.old[i,3] <- id.old[i,2]
+    }
+    else{
+      id.old[i,3] <- id.old[i,4]
+    }
+  }
+}
+id.old.need <- subset(id.old, !scan_id %in% id$scan_id)
+id <- funion(data.table(id),id.old.need)
+
+fwrite(id,'行政区划代码整合新旧两代.csv')
+
